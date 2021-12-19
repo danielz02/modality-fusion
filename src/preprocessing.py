@@ -8,16 +8,20 @@ def make_patches(x_path: str, y_path: str, window_size: int):
     margin = window_size // 2
 
     with rasterio.open(x_path) as x:
-        arr = x.read(list(range(1, 49)) + [50])
+        arr = x.read()
     with rasterio.open(y_path) as y:
         labels = y.read(1)
 
     x_patches, y_patches = [], []
-    for label in tqdm(np.unique(labels)):
+    for label in [1, 5]:
         if label == 0:
             continue
-        for x_idx, y_idx in zip(*np.where(labels == label)):
+        x_idx, y_idx = np.where(labels == label)
+        choices = np.random.choice(range(len(x_idx)), 100000)
+        for x_idx, y_idx in tqdm(zip(x_idx[choices], y_idx[choices])):
             patch = arr[:, (x_idx - margin):(x_idx + margin + 1), (y_idx - margin):(y_idx + margin + 1)]
+            if np.any(patch) < 0:
+                continue
             _, h, w = patch.shape
             if h != window_size or w != window_size:
                 continue
