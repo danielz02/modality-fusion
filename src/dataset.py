@@ -44,7 +44,31 @@ class HoustonPatches(LightningDataModule):
         self.test_dataset = TensorDataset(self.test_patches, self.test_labels)
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=6)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=6, pin_memory=True)
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=6)
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=6, pin_memory=True)
+
+
+class ChampaignDataset(LightningDataModule):
+    def __init__(self, patches, labels, batch_size):
+        super().__init__()
+        self.batch_size = batch_size
+        self.patches = torch.from_numpy(np.load(patches).astype(np.float32))
+        self.labels = torch.from_numpy(np.load(labels))
+        self.labels[self.labels == 1] = 0
+        self.labels[self.labels == 5] = 1
+        self.dataset = TensorDataset(self.patches, self.labels)
+
+        self.train_size = int(len(self.dataset) * 0.8)
+        self.test_size = len(self.dataset) - self.train_size
+        self.train_dataset, self.test_dataset = torch.utils.data.random_split(
+            self.dataset, [self.train_size, self.test_size]
+        )
+        self.class_names = ("Corn", "Soybean")
+
+    def train_dataloader(self) -> TRAIN_DATALOADERS:
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=6, pin_memory=True)
+
+    def val_dataloader(self) -> EVAL_DATALOADERS:
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=6, pin_memory=True)
